@@ -1,0 +1,38 @@
+appId: com.multiplatform.example
+---
+# E2E Test: App Launch and Real API Connection
+# Tests the full stack: Android app -> React frontend -> Node.js backend
+#
+# Prerequisites:
+#   1. Backend running: pnpm --filter @multiplatform/backend dev
+#   2. Android emulator running
+#   3. App installed on emulator
+
+- launchApp
+
+# Wait for app to fully load
+- waitForAnimationToEnd
+
+# Verify the app title is visible
+- assertVisible: "Multiplatform Example"
+
+# Verify the greeting from shared package renders
+- assertVisible: "Hello, Mobile!"
+
+# Verify Backend API section exists
+- assertVisible: "Backend API"
+
+# Wait for API call to complete (up to 10 seconds)
+- extendedWaitUntil:
+    visible: "Hello, Multiplatform Example!"
+    timeout: 10000
+
+# Verify the API returned the correct message (proves real backend connection)
+- assertVisible: "Hello, Multiplatform Example!"
+
+# Verify API version is displayed
+- assertVisible: "v1"
+
+# Verify other sections loaded
+- assertVisible: "Safari History"
+- assertVisible: "Saved Credentials"

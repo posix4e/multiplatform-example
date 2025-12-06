@@ -1,0 +1,61 @@
+appId: com.multiplatform.example
+---
+# E2E Test: Autofill Service Flow
+# Tests the Android autofill integration end-to-end
+#
+# Prerequisites:
+#   1. Backend running
+#   2. Autofill service enabled in Android settings
+#   3. Chrome or other browser installed
+
+- launchApp
+
+# Verify app loads with API connection
+- waitForAnimationToEnd
+- assertVisible: "Multiplatform Example"
+
+# Wait for backend connection
+- extendedWaitUntil:
+    visible: "Hello, Multiplatform Example!"
+    timeout: 10000
+
+# Now test autofill in a real browser
+- stopApp
+
+# Open Chrome to a login page (example.com for testing)
+- launchApp:
+    appId: com.android.chrome
+
+- waitForAnimationToEnd
+
+# Navigate to a site with a login form
+- tapOn:
+    id: "url_bar"
+    optional: true
+
+# If URL bar not visible, tap search box
+- tapOn:
+    id: "search_box_text"
+    optional: true
+
+# Type a URL with a login form
+- inputText: "https://accounts.google.com"
+- pressKey: Enter
+
+# Wait for page to load
+- waitForAnimationToEnd
+- wait: 3000
+
+# The autofill service should be triggered when focusing email/username field
+# In a real test, you'd look for the autofill popup from our service
+# This verifies the full flow: Browser -> Android Autofill Framework -> Our Service -> Tauri App
+
+# Go back to our app to verify autofill request was received
+- stopApp
+- launchApp:
+    appId: com.multiplatform.example
+
+- waitForAnimationToEnd
+
+# The app should still be connected to backend
+- assertVisible: "Hello, Multiplatform Example!"

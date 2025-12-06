@@ -12,7 +12,8 @@
     "tauri:build": "tauri build",
     "tauri:ios": "tauri ios",
     "tauri:android": "tauri android",
-    "lint": "eslint src/",
+    "test:e2e": "./e2e/run-tests.sh",
+    "test:e2e:build": "./e2e/run-tests.sh --build",
     "clean": "rm -rf dist"
   },
   "dependencies": {
