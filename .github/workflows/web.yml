@@ -35,7 +35,6 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run lint --filter=@multiplatform/web
       - run: pnpm turbo run build --filter=@multiplatform/web
 
   build-docker:

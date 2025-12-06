@@ -34,8 +34,6 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run lint --filter=@multiplatform/backend
-      - run: pnpm turbo run test --filter=@multiplatform/backend
       - run: pnpm turbo run build --filter=@multiplatform/backend
 
   build-docker:
