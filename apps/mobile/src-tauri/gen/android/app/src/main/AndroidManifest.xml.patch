@@ -1,0 +1,17 @@
+<!-- Add this inside the <application> tag of your AndroidManifest.xml -->
+
+<service
+    android:name=".autofill.MyAutofillService"
+    android:label="@string/app_name"
+    android:permission="android.permission.BIND_AUTOFILL_SERVICE"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.service.autofill.AutofillService" />
+    </intent-filter>
+    <meta-data
+        android:name="android.autofill"
+        android:resource="@xml/autofill_service" />
+</service>
+
+<!-- Also add this permission at the root <manifest> level -->
+<!-- <uses-permission android:name="android.permission.BIND_AUTOFILL_SERVICE" /> -->

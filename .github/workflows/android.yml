@@ -1,0 +1,226 @@
+name: Android App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/shared/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/shared/**'
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager --install "ndk;26.1.10909125"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm turbo run build --filter=@multiplatform/shared
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0"
+
+      - name: Initialize Android project
+        working-directory: apps/mobile
+        run: cargo tauri android init
+
+      - name: Build Android (Debug APK)
+        working-directory: apps/mobile
+        run: cargo tauri android build --debug
+        continue-on-error: true
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-${{ github.sha }}
+          path: |
+            apps/mobile/src-tauri/gen/android/app/build/outputs/apk/universal/debug/*.apk
+            apps/mobile/src-tauri/gen/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+
+  build-signed:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager --install "ndk;26.1.10909125"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - name: Decode Keystore
+        if: env.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > ${{ runner.temp }}/keystore.jks
+          echo "KEYSTORE_PATH=${{ runner.temp }}/keystore.jks" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm turbo run build --filter=@multiplatform/shared
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0"
+
+      - name: Initialize Android project
+        working-directory: apps/mobile
+        run: cargo tauri android init
+
+      - name: Build Android (Release AAB)
+        working-directory: apps/mobile
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: cargo tauri android build --release
+        continue-on-error: true
+
+      - name: Upload release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-${{ github.sha }}
+          path: |
+            apps/mobile/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
+            apps/mobile/src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          if-no-files-found: warn
+
+  upload-play-internal:
+    needs: build-signed
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+
+    steps:
+      - name: Download release AAB
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-${{ github.sha }}
+          path: ./artifacts
+        continue-on-error: true
+
+      - name: Upload to Play Store (Internal Testing)
+        if: env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != ''
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "Would upload to Play Store Internal Testing track here..."
+          # Use fastlane or gradle play publisher
+
+  upload-play-production:
+    needs: build-signed
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    environment: production
+
+    steps:
+      - name: Download release AAB
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-${{ github.sha }}
+          path: ./artifacts
+        continue-on-error: true
+
+      - name: Upload to Play Store (Production)
+        if: env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != ''
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "Would upload to Play Store Production track here..."
+
+  create-dev-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-debug-${{ github.sha }}
+          path: ./artifacts
+        continue-on-error: true
+
+      - name: Create dev release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-android-${{ github.sha }}
+          name: "Android Dev Build - ${{ github.sha }}"
+          body: |
+            Development build for testing.
+
+            **Install:** Download the APK and install directly on your Android device.
+            Enable "Install from unknown sources" if prompted.
+
+            Commit: ${{ github.sha }}
+          files: ./artifacts/**/*.apk
+          prerelease: true
+        continue-on-error: true

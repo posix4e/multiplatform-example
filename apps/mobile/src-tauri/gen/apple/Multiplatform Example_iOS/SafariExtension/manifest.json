@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Multiplatform History Tracker",
+  "version": "1.0",
+  "description": "Tracks browser history and sends to main app",
+  "permissions": ["tabs", "nativeMessaging"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "browser_specific_settings": {
+    "safari": {
+      "strict_min_version": "16.4"
+    }
+  }
+}
