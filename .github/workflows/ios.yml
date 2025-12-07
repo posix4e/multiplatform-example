@@ -228,14 +228,21 @@ jobs:
           name: ios-release-${{ github.sha }}
 
       - name: Upload to TestFlight
-        if: env.APPLE_API_KEY_ID != ''
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
         run: |
-          echo "Would upload to TestFlight here..."
-          # xcrun altool --upload-app -f *.ipa --type ios --apiKey $APPLE_API_KEY_ID --apiIssuer $APPLE_API_ISSUER_ID
+          # Create API key file for authentication
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APPLE_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8
+
+          # Upload to TestFlight
+          xcrun altool --upload-app \
+            -f ios-release.ipa \
+            --type ios \
+            --apiKey "$APPLE_API_KEY_ID" \
+            --apiIssuer "$APPLE_API_ISSUER_ID"
 
   upload-appstore:
     needs: build-signed
@@ -250,12 +257,21 @@ jobs:
           name: ios-release-${{ github.sha }}
 
       - name: Upload to App Store Connect
-        if: env.APPLE_API_KEY_ID != ''
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
         run: |
-          echo "Would upload to App Store Connect here..."
+          # Create API key file for authentication
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APPLE_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8
+
+          # Upload to App Store Connect
+          xcrun altool --upload-app \
+            -f ios-release.ipa \
+            --type ios \
+            --apiKey "$APPLE_API_KEY_ID" \
+            --apiIssuer "$APPLE_API_ISSUER_ID"
 
   create-dev-release:
     needs: build

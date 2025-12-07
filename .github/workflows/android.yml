@@ -161,13 +161,28 @@ jobs:
           path: ./artifacts
         continue-on-error: true
 
+      - uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install fastlane
+        run: gem install fastlane
+
       - name: Upload to Play Store (Internal Testing)
-        if: env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != ''
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          echo "Would upload to Play Store Internal Testing track here..."
-          # Use fastlane or gradle play publisher
+          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > service_account.json
+          fastlane supply \
+            --aab ./artifacts/*.aab \
+            --track internal \
+            --json_key service_account.json \
+            --package_name com.multiplatform.example
+          rm service_account.json
 
   upload-play-production:
     needs: build-signed
@@ -183,12 +198,28 @@ jobs:
           path: ./artifacts
         continue-on-error: true
 
+      - uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install fastlane
+        run: gem install fastlane
+
       - name: Upload to Play Store (Production)
-        if: env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != ''
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          echo "Would upload to Play Store Production track here..."
+          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > service_account.json
+          fastlane supply \
+            --aab ./artifacts/*.aab \
+            --track production \
+            --json_key service_account.json \
+            --package_name com.multiplatform.example
+          rm service_account.json
 
   create-dev-release:
     needs: build
