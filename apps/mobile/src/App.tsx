@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { greet, APP_NAME, API_VERSION, type HistoryEntry, type Credential, type ApiResponse } from '@multiplatform/shared';
+import { greet, APP_NAME, type HistoryEntry, type Credential, type ApiResponse } from '@multiplatform/shared';
 
 // Android emulator uses 10.0.2.2 to reach host's localhost
 // iOS simulator uses localhost directly
